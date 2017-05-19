@@ -15,8 +15,8 @@ let hashManifest = {},
 
 // Step 1: Clone project
 // child_process.execSync('git clone git@git.connectflexi.com:Frontend/night2stay.git ' + cloneDir);
-// child_process.execSync('npm install @angular/cli@1.0.3', { cwd: 'clone'});
-// child_process.execSync('npm install', { cwd: 'clone' });
+child_process.execSync('npm install @angular/cli@1.0.3', { cwd: cloneDir });
+// child_process.execSync('npm install', { cwd: cloneDir });
 
 // Step 2: Minify
 // minify();
@@ -27,7 +27,7 @@ let hashManifest = {},
 // console.log('\n\t##### Hashed ##########################\n');
 
 // Step 4: Build
-// child_process.execSync('ng build -prod -e backuat', { cwd: cloneDir});
+// child_process.execSync('ng build -prod -e backuat', { cwd: cloneDir });
 
 // Step 5: Archiving
 // console.log('\n\t##### Archiving files #################\n');
