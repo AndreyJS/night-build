@@ -27,20 +27,20 @@ let hashManifest = {},
 // console.log('\n\t##### Hashed ##########################\n');
 
 // Step 4: Build
-// child_process.execSync('cd .\clone\ ng build -prod -e backuat');
+// child_process.execSync('ng build -prod -e backuat', { cwd: cloneDir});
 
 // Step 5: Archiving
-console.log('\n\t##### Archiving files #################\n');
-for (let i = 0, exc = options.zip.exclude; i < exc.length; i++) {
-    excludeOptions[exc[i]] = 0;
-}
-hashManifest = JSON.parse(fs.readFileSync(cloneDir + 'hashManifest.json'));
-zip(cloneDir + 'dist/');
-excludeOptions = {};
+// console.log('\n\t##### Archiving files #################\n');
+// for (let i = 0, exc = options.zip.exclude; i < exc.length; i++) {
+//     excludeOptions[exc[i]] = 0;
+// }
+// hashManifest = JSON.parse(fs.readFileSync(cloneDir + 'hashManifest.json'));
+// zip(cloneDir + 'dist/');
+// excludeOptions = {};
 
-console.log('\n\t##### Archiving dist ##################\n');
-zipDist();
-console.log('\n\t##### Archived dist ###################\n');
+// console.log('\n\t##### Archiving dist ##################\n');
+// zipDist();
+// console.log('\n\t##### Archived dist ###################\n');
 
 function minify() {
     console.log('\n\t##### Minifying #######################\n');
@@ -54,7 +54,7 @@ function minify() {
         //[TODO] разобраться со слешем в rootDir
         srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.html');
         srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.svg');
-        srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.xml');
+        srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.xml'); // [TODO] пробел после первого тега xml
     }
     excludeOptions = {};
     return gulp.src(srcArr, { base: './' })
@@ -64,7 +64,8 @@ function minify() {
             collapseWhitespace: true,
             minifyCSS: true,
             minifyJS: true,
-            removeComments: true
+            removeComments: true,
+            trimCustomFragments: true
         }))
         .pipe(gulp.dest('./'));        
 }
