@@ -22,7 +22,7 @@ let hashManifest = {},
 // minify();
 // console.log('\n\t##### Minifyed ########################\n');
 
-// // Step 3: Hashing
+// // // Step 3: Hashing
 // hash();
 // console.log('\n\t##### Hashed ##########################\n');
 
@@ -31,9 +31,15 @@ let hashManifest = {},
 
 // Step 5: Archiving
 // console.log('\n\t##### Archiving files #################\n');
+// for (let i = 0, exc = options.zip.exclude; i < exc.length; i++) {
+//     excludeOptions[exc[i]] = 0;
+// }
+// hashManifest = JSON.parse(fs.readFileSync(cloneDir + 'hashManifest.json'));
 // zip(cloneDir + 'dist/');
+// excludeOptions = {};
+
 console.log('\n\t##### Archiving dist ##################\n');
-zipDist(); // []
+zipDist();
 console.log('\n\t##### Archived dist ###################\n');
 
 function minify() {
@@ -48,6 +54,7 @@ function minify() {
         //[TODO] разобраться со слешем в rootDir
         srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.html');
         srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.svg');
+        srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.xml');
     }
     excludeOptions = {};
     return gulp.src(srcArr, { base: './' })
@@ -72,7 +79,7 @@ function minifyJSON(dir) {
                 excludeOptions[dir + '/' + files[i]]++;
                 continue;
             }
-            if (files[i].indexOf('.json') === -1) continue;            
+            if (files[i].indexOf('.json') === -1 && files[i].indexOf('manifest.webmanifest') === -1) continue;            
             let content = fs.readFileSync(dir + files[i], 'utf8');
             content = JSON.stringify(JSON.parse(content));
             fs.writeFileSync(dir + files[i], content);
@@ -164,13 +171,25 @@ function replaceHashingFiles(dir) {
 function zip(dir) {
     let files = fs.readdirSync(dir);
     for (let i = 0; i < files.length; i++) {
+        if ((dir + files[i]) in excludeOptions) {
+            excludeOptions[dir + files[i]]++;
+            continue;
+        }
         let stat = fs.statSync(dir + files[i]);
 
         if (stat.isFile()) {
-            let ext,
-                iExt = files[i].lastIndexOf('.');
+            let ext, iExt = files[i].lastIndexOf('.');
             if (iExt !== -1) ext = files[i].substring(iExt + 1);
-            if (ext in excludeExt) continue;
+
+            let isExcludeFile = false;
+            let excludeOptionsKeys = Object.keys(excludeOptions);
+            for (let j = 0; j < excludeOptionsKeys.length; j++) {
+                if (hashManifest[excludeOptionsKeys[j]] === files[i] || excludeOptionsKeys[j] === files[i]) {
+                    isExcludeFile = true;
+                    break;
+                }
+            }
+            if (ext in excludeExt || isExcludeFile) continue;
 
             let input = fs.readFileSync(dir + files[i], 'utf8');
             let zipBuff = zlib.gzipSync(input, { level: zlib.Z_BEST_COMPRESSION });  
@@ -197,7 +216,7 @@ function zipDist() {
     archive.on('error', (err) => {
         throw err;
     });
-    archive.directory(cloneDir + 'dist');
+    archive.directory(cloneDir + 'dist', '');
     archive.finalize();
     archive.pipe(output);
 }

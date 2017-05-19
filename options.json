@@ -9,6 +9,6 @@
         "exclude": ["tsconfig.app.json", "tsconfig.spec.json"]
     },
     "zip": {
-        "exclude": ["assets/robots.txt", "assets/favicons/browserconfig.xml", "assets/favicons/manifest.webmanifest"]
+        "exclude": ["robots.txt", "browserconfig.xml", "manifest.webmanifest"]
     }
 }
