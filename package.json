@@ -1,0 +1,12 @@
+{
+  "name": "build",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "gulp": "^3.9.1",
+    "gulp-htmlmin": "^3.0.0",
+    "gulp-zip": "^4.0.0"
+  },
+  "devDependencies": {}
+}

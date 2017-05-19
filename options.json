@@ -1,0 +1,11 @@
+{
+    "root": "src",
+    "hash": {
+        "src": ["assets"],
+        "exclude": ["assets/favicons/browserconfig.xml"]
+    },
+    "minify": {
+        "src": [""],
+        "exclude": ["tsconfig.app.json", "tsconfig.spec.json"]
+    }
+}
