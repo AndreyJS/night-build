@@ -1,3 +1,4 @@
+const archiver = require('archiver');
 const gulp = require('gulp');
 const htmlmin = require('gulp-htmlmin');
 const child_process = require('child_process');
@@ -8,31 +9,35 @@ const options = require('./options');
 
 let hashManifest = {},
     excludeOptions = {},
-    excludeZip = { jpeg: 0, jpg: 0, ico: 0, png: 0 },
+    excludeExt = { jpeg: 0, jpg: 0, ico: 0, png: 0 },
     cloneDir = 'clone/',
     rootDir = cloneDir + options.root + '/'; 
 
-//Step 1: Clone project
+// Step 1: Clone project
 // child_process.execSync('git clone git@git.connectflexi.com:Frontend/night2stay.git ' + cloneDir);
-// child_process.execFileSync('git', ['clone', 'git@git.connectflexi.com:Frontend/night2stay.git', cloneDir]);
-// child_process.execSync('npm install @angular/cli@latest', { cwd: 'clone'});
-// child_process.execSync('ng build -prod');
-// child_process.execFileSync('npm', ['install', '@angular/cli@latest'], { cwd: 'clone' });
-// child_process.execFileSync('clone/npm', ['install']);
+// child_process.execSync('npm install @angular/cli@1.0.3', { cwd: 'clone'});
+// child_process.execSync('npm install', { cwd: 'clone' });
 
-//Step 2: Minify
+// Step 2: Minify
 // minify();
+// console.log('\n\t##### Minifyed ########################\n');
 
-//Step 3: Hashing
+// // Step 3: Hashing
 // hash();
+// console.log('\n\t##### Hashed ##########################\n');
 
-//Step 4: Build
-// child_process.execSync('cd .\clone\ ng build -prod');
+// Step 4: Build
+// child_process.execSync('cd .\clone\ ng build -prod -e backuat');
 
-//Step 5: Archiving
-zip(cloneDir + 'dist');
+// Step 5: Archiving
+// console.log('\n\t##### Archiving files #################\n');
+// zip(cloneDir + 'dist/');
+console.log('\n\t##### Archiving dist ##################\n');
+zipDist(); // []
+console.log('\n\t##### Archived dist ###################\n');
 
 function minify() {
+    console.log('\n\t##### Minifying #######################\n');
     let srcArr = [];
 
     for (let i = 0, exc = options.minify.exclude; i < exc.length; i++) {
@@ -54,14 +59,14 @@ function minify() {
             minifyJS: true,
             removeComments: true
         }))
-        .pipe(gulp.dest('./'));           
+        .pipe(gulp.dest('./'));        
 }
 
 function minifyJSON(dir) {
     let files = fs.readdirSync(dir);
     for (let i = 0; i < files.length; i++) {
         let stat = fs.statSync(dir + files[i]);
-
+        // [TODO] минифицировать webManifest
         if (stat.isFile()) {
             if ((dir + files[i]) in excludeOptions) {
                 excludeOptions[dir + '/' + files[i]]++;
@@ -78,18 +83,23 @@ function minifyJSON(dir) {
 }
 
 function hash() { 
+    console.log('\n\t##### Hashing #########################')
     //[TODO] favicon.ico, robots.txt, safary-pinned-tad? in exclude
     let src = options.hash.src;
 
     for (let i = 0, exc = options.hash.exclude; i < exc.length; i++) {
         excludeOptions[rootDir + exc[i]] = 0;
     }
+    console.log('\n\t##### Changing name files #############\n');
     for (let i = 0; i < src.length; i++) {
         hashingFiles(rootDir + src[i]);
     }  
+    console.log('\n\t##### Writing hash manifest ###########\n');
     fs.writeFileSync(cloneDir + 'hashManifest.json', JSON.stringify(hashManifest, null, 4));
+    console.log('Write:', cloneDir + 'hashManifest.json');
+    console.log('\n\t##### Replacing hash url in files #####\n');
     replaceHashingFiles(rootDir);
-    //[TODO] browserconfig.xml, index.html, manifestWebmanifest, vendor in exclude
+    //[TODO] in browserconfig.xml, index.html, manifestWebmanifest, vendor not replaced
     excludeOptions = {};
 };
 
@@ -109,7 +119,10 @@ function hashingFiles(dir) {
                 .createHash('sha256')
                 .update(files[j])
                 .digest('hex')
-                .substr(0, 20) + ext;
+                .substr(0, 20) + ext; 
+            console.log('rename file: ' + dir + '/' + files[j]);
+            console.log('renamed to: ' + dir + '/' + hashManifest[files[j]]);
+            console.log('----------'); 
             fs.renameSync(dir + '/' + files[j], dir + '/' + hashManifest[files[j]]);
         } else if (stat.isDirectory()) {
             hashingFiles(dir + '/' + files[j]);
@@ -120,18 +133,30 @@ function hashingFiles(dir) {
 function replaceHashingFiles(dir) {
     let files = fs.readdirSync(dir);
     for (let i = 0; i < files.length; i++) {
-        let stat = fs.statSync(dir + '/' + files[i]);
+        let stat = fs.statSync(dir + files[i]);
         if (stat.isFile()) {
-            let content = fs.readFileSync(dir + '/' + files[i], 'utf8');
+            let ext,
+                iExt = files[i].lastIndexOf('.');
+            if (iExt !== -1) ext = files[i].substring(iExt + 1);
+            if (ext in excludeExt) continue;
+
+            let content = fs.readFileSync(dir + files[i], 'utf8');
             let result;
             let hashKeyArr = Object.keys(hashManifest);
             for (let j = 0; j < hashKeyArr.length; j++) {
                 let regexp = new RegExp(hashKeyArr[j], "g");
-                result = content.replace(regexp, hashManifest[hashKeyArr[j]]);
+                content = content.replace(regexp, (match) => {
+                    console.log('file: ' + dir + files[i]);
+                    console.log('matched string: ' + match);
+                    console.log('replaced string: ' + hashManifest[hashKeyArr[j]]);
+                    console.log('----------');                   
+                    return hashManifest[hashKeyArr[j]];
+                });
+                // content = content.replace(regexp, hashManifest[hashKeyArr[j]]);
             }
-            if (content !== result) fs.writeFileSync(dir + '/' + files[i], result, 'utf8');
+            fs.writeFileSync(dir + files[i], content, 'utf8');
         } else if (stat.isDirectory()) {
-            replaceHashingFiles(dir + '/' + files[i]);
+            replaceHashingFiles(dir + files[i] + '/');
         }
     }
 }
@@ -139,20 +164,40 @@ function replaceHashingFiles(dir) {
 function zip(dir) {
     let files = fs.readdirSync(dir);
     for (let i = 0; i < files.length; i++) {
-        let stat = fs.statSync(dir + '/' + files[i]);
+        let stat = fs.statSync(dir + files[i]);
 
         if (stat.isFile()) {
             let ext,
                 iExt = files[i].lastIndexOf('.');
             if (iExt !== -1) ext = files[i].substring(iExt + 1);
-            if (ext in excludeZip) continue;
+            if (ext in excludeExt) continue;
 
-            let input = fs.readFileSync(dir + '/' + files[i], 'utf8');
+            let input = fs.readFileSync(dir + files[i], 'utf8');
             let zipBuff = zlib.gzipSync(input, { level: zlib.Z_BEST_COMPRESSION });  
-            fs.writeFileSync(dir + '/' + files[i] + '.gz', zipBuff);
-            fs.utimesSync(dir + '/' + files[i] + '.gz', stat.atime, stat.mtime);
+            fs.writeFileSync(dir + files[i] + '.gz', zipBuff);
+            fs.utimesSync(dir + files[i] + '.gz', stat.atime, stat.mtime);
         } else if (stat.isDirectory()) {
-            zip(dir + '/' + files[i]);
+            zip(dir + files[i] + '/');
         }
     }
+}
+
+function zipDist() {
+    let packageJSON = JSON.parse(fs.readFileSync(cloneDir + 'package.json'));
+    let nameZip = packageJSON.name ? packageJSON.name : '';
+    nameZip = packageJSON.version && nameZip ? nameZip + '_' + packageJSON.version : packageJSON.version || nameZip;
+    let output = fs.createWriteStream(cloneDir + (nameZip || 'dist') + '.zip');
+
+    output.on('close', () => {
+        console.log('Archive\'s size: ' + archive.pointer() + ' bytes');
+        console.log('archiver has been finalized and the output file descriptor has closed');
+    })
+
+    let archive = archiver('zip');
+    archive.on('error', (err) => {
+        throw err;
+    });
+    archive.directory(cloneDir + 'dist');
+    archive.finalize();
+    archive.pipe(output);
 }

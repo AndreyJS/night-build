@@ -2,10 +2,13 @@
     "root": "src",
     "hash": {
         "src": ["assets"],
-        "exclude": ["assets/favicons/browserconfig.xml"]
+        "exclude": ["assets/favicons/favicon.ico", "assets/robots.txt"]
     },
     "minify": {
         "src": [""],
         "exclude": ["tsconfig.app.json", "tsconfig.spec.json"]
+    },
+    "zip": {
+        "exclude": ["assets/robots.txt", "assets/favicons/browserconfig.xml", "assets/favicons/manifest.webmanifest"]
     }
 }
