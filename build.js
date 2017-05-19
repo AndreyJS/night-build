@@ -30,13 +30,13 @@ let hashManifest = {},
 // child_process.execSync('cd .\clone\ ng build -prod -e backuat');
 
 // Step 5: Archiving
-// console.log('\n\t##### Archiving files #################\n');
-// for (let i = 0, exc = options.zip.exclude; i < exc.length; i++) {
-//     excludeOptions[exc[i]] = 0;
-// }
-// hashManifest = JSON.parse(fs.readFileSync(cloneDir + 'hashManifest.json'));
-// zip(cloneDir + 'dist/');
-// excludeOptions = {};
+console.log('\n\t##### Archiving files #################\n');
+for (let i = 0, exc = options.zip.exclude; i < exc.length; i++) {
+    excludeOptions[exc[i]] = 0;
+}
+hashManifest = JSON.parse(fs.readFileSync(cloneDir + 'hashManifest.json'));
+zip(cloneDir + 'dist/');
+excludeOptions = {};
 
 console.log('\n\t##### Archiving dist ##################\n');
 zipDist();
