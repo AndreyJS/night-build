@@ -28,8 +28,10 @@ if (!projName) {
 let hashManifest = {},
     excludeOptions = {},
     excludeExt = { jpeg: 0, jpg: 0, ico: 0, png: 0 },
-    buildDir = 'build/'
+
+    buildDir = 'build/',
     cloneDir = 'clone/',
+    distDir = cloneDir + 'dist/';
     rootDir = cloneDir + options.root + '/';
 
 // Step 0: Delete directories if its exist
@@ -207,8 +209,9 @@ function hash() {
     replaceHashingFiles(rootDir);
     excludeOptions = {};
 
-    build();
-    archiveZIP();  
+    build('uat');
+    move();
+    archiveZIP('uat');  
 };
 
 function hashingFiles(dir) {
@@ -249,7 +252,6 @@ function replaceHashingFiles(dir) {
             if (ext in excludeExt) continue;
 
             let content = fs.readFileSync(dir + files[i], 'utf8');
-            let result;
             let hashKeyArr = Object.keys(hashManifest);
             for (let j = 0; j < hashKeyArr.length; j++) {
                 let regexp = new RegExp(hashKeyArr[j], "g");
@@ -276,7 +278,37 @@ function build(envBuild) {
     }
     console.log('\n##### Building ########################\n');
     // console.log('ng build -prod -e ' + envBuild);
-    child_process.execSync('ng build -prod', { cwd: cloneDir });
+    child_process.execSync(`ng build -prod -e ${envBuild} -d /js/`, { cwd: cloneDir });
+}
+
+function move() {
+    try {
+        fs.readdirSync(distDir + 'js/');
+    } catch(err) {
+        fs.mkdirSync(distDir + 'js/');
+    }
+    try {
+        fs.readdirSync(distDir + 'css/');
+    } catch(err) {
+        fs.mkdirSync(distDir + 'css/');
+    }
+    let files = fs.readdirSync(distDir);
+    for (let i = 0; i < files.length; i++) {
+        let stat = fs.statSync(distDir + files[i]);
+        if (stat.isFile()) {
+            if (/.js&/.test(files[i])) {
+                fs.renameSync(distDir + files[i], distDir + 'js/' + files[i]);
+            } else if (/.css$/.test(files[i])) {
+                fs.renameSync(distDir + files[i], distDir + 'css/' + files[i]);
+            }
+            let content = fs.readFileSync(distDir + 'index.html', 'utf8');
+            let regexp = new RegExp(/href="(.*)\.css"/);
+            content = content.replace(regexp, (match) => {
+                let secondSlash = match.lastIndexOf('/');
+                return 'href="/css' + match.slice(secondSlash);
+            });
+        }
+    }
 }
 
 function archiveZIP(envBuild) {
