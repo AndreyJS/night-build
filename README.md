@@ -9,7 +9,7 @@
 # Запуск сборки
 
 ```bash
-node build -name <name>
+node build -name <name> [-no-upload]
 ```
 ## Возможные значения
 
@@ -18,6 +18,13 @@ node build -name <name>
 Пример: 
 ```bash
 node build -name bonus
+```
+
+2. -no-upload, -no - ключ, отменяющий загрузку в репозиторий.
+
+Пример: 
+```bash
+node build -name bonus -no-upload
 ```
 
 # Изменение версии
@@ -49,3 +56,8 @@ node update -name <name>
 node update -name bonus
 ```
 
+# Загрузка шрифтов
+
+```bash
+node fonts
+```

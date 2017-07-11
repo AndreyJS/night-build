@@ -8,11 +8,14 @@ let http = require('http');
 const zlib = require('zlib');
 const options = require('./options');
 
-let packageJSON, projName, projVersion;
+let packageJSON, projName, projVersion, isUpload = true;
 
 for (let i = 2; i < process.argv.length; i++) {
     if (process.argv[i] === '-name' || process.argv[i] === '-n') {
         projName = process.argv[i + 1];
+    }
+    if (process.argv[i] === '-no-upload' || process.argv[i] === '-no') {
+        isUpload = false;
     }
 }
 
@@ -176,7 +179,7 @@ function minifyJSON(dir) {
                 excludeOptions[dir + '/' + files[i]]++;
                 continue;
             }
-            if (files[i].indexOf('.json') === -1 && files[i].indexOf('manifest.webmanifest') === -1) continue;            
+            if (files[i].indexOf('.json') === -1 && files[i].indexOf('manifest.webmanifest') === -1) continue;  
             let content = fs.readFileSync(dir + files[i], 'utf8');
             content = JSON.stringify(JSON.parse(content));
             fs.writeFileSync(dir + files[i], content);
@@ -204,8 +207,8 @@ function hash() {
     replaceHashingFiles(rootDir);
     excludeOptions = {};
 
-    build('uat');
-    archiveZIP('uat');  
+    build();
+    archiveZIP();  
 };
 
 function hashingFiles(dir) {
@@ -272,8 +275,8 @@ function build(envBuild) {
         fs.mkdirSync(buildDir);
     }
     console.log('\n##### Building ########################\n');
-    console.log('ng build -prod -e ' + envBuild);
-    child_process.execSync('ng build -prod -e ' + envBuild, { cwd: cloneDir });
+    // console.log('ng build -prod -e ' + envBuild);
+    child_process.execSync('ng build -prod', { cwd: cloneDir });
 }
 
 function archiveZIP(envBuild) {
@@ -347,7 +350,7 @@ function zipDist(envBuild) {
         } else if (envBuild === 'prod') {
             deleteDirSync(cloneDir);
         }
-        putToRepo(name);
+        if (isUpload) putToRepo(name);
     })
 
     let archive = archiver('tar', { gzip: true });
