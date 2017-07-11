@@ -13,7 +13,7 @@
     },
     "fonts": {
         "FAMILY": "Roboto",
-        "VARIANTS": { "100": "Thin", "300": "Light", "500":"MediumItalic", "900":"Black" },
+        "VARIANTS": { "100": "Thin", "300": "Light", "400": "Regular", "500":"Medium", "700": "Bold", "900":"Black" },
         "SUBSETS": "cyrillic,latin,vietnamese",
         "USER_AGENTS": {
             "embedded-opentype": "Mozilla/5.0 (compatible; MSIE 8.0; Windows NT 6.1; Trident/4.0)",

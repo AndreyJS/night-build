@@ -4,10 +4,10 @@ const config = require('./options').fonts;
 
 const variants = Object.keys(config.VARIANTS);
 const agents = Object.keys(config.USER_AGENTS);
-const lastFont = agents.length * variants.length;
+const lastFont = agents.length * variants.length * 2; //2 стиля шрифтов: normal, italic
 const fontRegExp = /url\(([^\)]*?)\)/m;
 
-let sourceMap = {};
+let sourceMap = {}, sourceMapItalic = {};
 let counterFonts = 0;
 
 let rootDir = './fonts/'
@@ -44,11 +44,18 @@ fs.stat(rootDir, (err, stats) => {
 
 for (let i = 0; i < variants.length; i++) {
     let fontFamily = config.FAMILY + '-' + config.VARIANTS[variants[i]];
+    let fontFamilyItalic = config.FAMILY + '-' + config.VARIANTS[variants[i]] + 'italic';
+
     sourceMap[fontFamily] = {};
-    sourceMap[fontFamily].weight = variants[i];
+    sourceMapItalic[fontFamilyItalic] = {};
+    sourceMap[fontFamily].weight = sourceMapItalic[fontFamilyItalic].weight = variants[i];
+
     sourceMap[fontFamily].style = config.VARIANTS[variants[i]];
+    sourceMapItalic[fontFamilyItalic].style = config.VARIANTS[variants[i]] + 'Italic';
+    
     for (let k = 0; k < agents.length; k++) {
-        getResponce(variants[i], agents[k], fontFamily);
+        getResponce(variants[i], agents[k], sourceMap, fontFamily);
+        getResponce(variants[i], agents[k], sourceMapItalic, fontFamilyItalic, 'Italic');
     }
 }
 
@@ -70,12 +77,14 @@ function deleteDirSync(dir) {
     fs.rmdirSync(dir); 
 }
 
-function getResponce(idVariant, idFormat, fontFamily) {
-    let req = http.request({
+function getResponce(idVariant, idFormat, sourceMapLocal, fontFamily, style) {
+    style = style || '';
+
+    req = http.request({
         hostname: 'fonts.googleapis.com',
         method: 'GET',
         port: 80,
-        path: '/css?family=' + config.FAMILY + ":" + config.VARIANTS[idVariant] + '&subset=' + config.SUBSETS,
+        path: '/css?family=' + config.FAMILY + ":" + config.VARIANTS[idVariant] + style + '&subset=' + config.SUBSETS,
         headers: {
             'User-Agent': config.USER_AGENTS[idFormat]
         }
@@ -87,16 +96,16 @@ function getResponce(idVariant, idFormat, fontFamily) {
         });
         res.on('end', () => {
             let result = fontRegExp.exec(output) ? fontRegExp.exec(output)[1] : null;
-            let fontname = config.FAMILY.toLowerCase() + '-' + config.VARIANTS[idVariant].toLowerCase();
-
+            let fontname = config.FAMILY.toLowerCase() + '-' + config.VARIANTS[idVariant].toLowerCase() + style.toLowerCase();
             if (result) {
                 let filename;
+
                 if (idFormat === 'svg') {
                     filename = (/kit=(.*?)&/).exec(result)[1] + '.svg';
                 } else {
                     filename = (/v16\/(.*)/).exec(result)[1];
                 }
-                // request(result).pipe(fs.createWriteStream('./fonts/' + filename));
+                
                 http.get(result, (res) => {
                     let error;
                     if (res.statusCode !== 200) {
@@ -119,29 +128,34 @@ function getResponce(idVariant, idFormat, fontFamily) {
                     });
                 });
 
-                sourceMap[fontFamily][idFormat] = filename;
+                sourceMapLocal[fontFamily][idFormat] = filename;
                 counterFonts++;
                 if (counterFonts === lastFont) {
-                    fontArr = Object.keys(sourceMap);
-                    for (let i = 0; i < fontArr.length; i++) {
-                        let scss = `@font-face {\n\tfont-family:"${fontArr[i]}";\n`;
-                        let fontFamilyArr = Object.keys(sourceMap[fontArr[i]]);
-                        for (let k = 0; k < fontFamilyArr.length; k++) {
-                            if(fontFamilyArr[k] === 'weight' || fontFamilyArr[k] === 'style') continue;
-                            scss += `\tsrc: url("../fonts/${sourceMap[fontArr[i]][fontFamilyArr[k]]}") format("${fontFamilyArr[k]}");\n`
-                        }
-                        let style;
-                        if (sourceMap[fontArr[i]].style.indexOf('Italic') !== -1) style = 'italic';
-                        else style = 'normal';
-
-                        scss += `\tfont-weight: ${sourceMap[fontArr[i]].weight};\n\tfont-style: ${style};\n}`;
-                        fontname = fontArr[i].toLowerCase();
-                        fs.writeFile(scssDir + fontname + '.scss', scss);
-                        fs.appendFile(scssDir + 'roboto.scss', `@import "${fontname}";\n`)
-                    }
+                    writeScss(sourceMap);
+                    writeScss(sourceMapItalic, 'italic');
                 }
             }
         });
     });
     req.end();
+}
+
+function writeScss(sourceMap, style) {
+    fontArr = Object.keys(sourceMap);
+    for (let i = 0; i < fontArr.length; i++) {
+        let scss = `@font-face {\n\tfont-family:"${fontArr[i]}";\n`;
+        let fontFamilyArr = Object.keys(sourceMap[fontArr[i]]);
+        for (let k = 0; k < fontFamilyArr.length; k++) {
+            if(fontFamilyArr[k] === 'weight' || fontFamilyArr[k] === 'style') continue;
+            scss += `\tsrc: url("../fonts/${sourceMap[fontArr[i]][fontFamilyArr[k]]}") format("${fontFamilyArr[k]}");\n`
+        }
+
+        // let style;
+        if (!style) style = 'normal';
+
+        scss += `\tfont-weight: ${sourceMap[fontArr[i]].weight};\n\tfont-style: ${style};\n}`;
+        fontname = fontArr[i].toLowerCase();
+        fs.writeFile(scssDir + fontname + '.scss', scss);
+        fs.appendFile(scssDir + 'roboto.scss', `@import "${fontname}";\n`)
+    }
 }
