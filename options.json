@@ -2,7 +2,7 @@
     "root": "src",
     "hash": {
         "src": ["assets"],
-        "exclude": ["assets/favicons/favicon.ico", "assets/robots.txt"]
+        "exclude": ["assets/favicon.ico", "assets/robots.txt"]
     },
     "minify": {
         "src": [""],
