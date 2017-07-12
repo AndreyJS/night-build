@@ -150,7 +150,6 @@ function writeScss(sourceMap, style) {
             scss += `\tsrc: url("../fonts/${sourceMap[fontArr[i]][fontFamilyArr[k]]}") format("${fontFamilyArr[k]}");\n`
         }
 
-        // let style;
         if (!style) style = 'normal';
 
         scss += `\tfont-weight: ${sourceMap[fontArr[i]].weight};\n\tfont-style: ${style};\n}`;

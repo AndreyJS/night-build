@@ -8,6 +8,8 @@
 
 # Запуск сборки
 
+## Перед сборкой в node_modules\@angular\cli\models\webpack-configs\common.js в return изменить значение output.publicPath c 'buildOptions.deployUrl' на '/js/'
+
 ```bash
 node build -name <name> [-no-upload]
 ```

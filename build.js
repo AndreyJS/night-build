@@ -69,24 +69,10 @@ try {
 console.log('\n##### Installing packages #############\n');
 child_process.execSync('npm install @angular/cli@1.0.3', { cwd: cloneDir });
 child_process.execSync('npm install', { cwd: cloneDir });
+setPath();
 
-// Step 2: Minify, Hashing, Building, Archiving files, Archiving dist
+// Step 2: Minify, Hashing, Building, Moving, Archiving files, Archiving dist
 minify();
-
-// Step 3: Hashing
-// вызывается в minify
-// hash();
-
-// Следующие шаги вызываются в hash
-// Step 4: Build
-// build();
-
-// Step 5: Archiving
-// archiveZip();
-
-// Step 6: Uploading
-// вызывается в zipDist в archiveZip
-// putToRepo();
 
 function deleteDirSync(dir) {
     let files;
@@ -141,6 +127,18 @@ function deleteDir(dir) {
     });
 }
 
+function setPath() {
+    let content;
+    try {
+        content = fs.readFileSync(cloneDir + 'node_modules/@angular/cli/models/webpack-configs/common.js', 'utf8');
+    } catch(err) {
+        console.log(err);
+    }
+    let index = content.indexOf('buildOptions.deployUrl');
+    content = content.substring(0, index) + "'/js/'" + content.substring(index + 'buildOptions.deployUrl'.length);
+    fs.writeFileSync(cloneDir + 'node_modules/@angular/cli/models/webpack-configs/common.js', content, 'utf8');
+}
+
 function minify() {
     console.log('\n##### Minifying #######################');
     let srcArr = [];
@@ -150,7 +148,6 @@ function minify() {
     }
     for (let i = 0, src = options.minify.src; i < src.length; i++) {
         minifyJSON(rootDir + (src[i] ? src[i] + '/' : src[i]));
-        //[TODO] разобраться со слешем в rootDir
         srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.html');
         srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.svg');
         srcArr.push(rootDir + (src[i] ? src[i] + '/' : src[i]) + '**/*.xml');
@@ -277,8 +274,8 @@ function build(envBuild) {
         fs.mkdirSync(buildDir);
     }
     console.log('\n##### Building ########################\n');
-    // console.log('ng build -prod -e ' + envBuild);
-    child_process.execSync(`ng build -prod -e ${envBuild} -d /js/`, { cwd: cloneDir });
+    console.log(`ng build -prod -e ${envBuild} --extract-licenses=false`);
+    child_process.execSync(`ng build -prod -e ${envBuild} --extract-licenses=false`, { cwd: cloneDir });
 }
 
 function move() {
@@ -293,22 +290,25 @@ function move() {
         fs.mkdirSync(distDir + 'css/');
     }
     let files = fs.readdirSync(distDir);
+    let inline;
     for (let i = 0; i < files.length; i++) {
         let stat = fs.statSync(distDir + files[i]);
         if (stat.isFile()) {
-            if (/.js&/.test(files[i])) {
+            if (/.js$/.test(files[i])) {
                 fs.renameSync(distDir + files[i], distDir + 'js/' + files[i]);
             } else if (/.css$/.test(files[i])) {
                 fs.renameSync(distDir + files[i], distDir + 'css/' + files[i]);
             }
-            let content = fs.readFileSync(distDir + 'index.html', 'utf8');
-            let regexp = new RegExp(/href="(.*)\.css"/);
-            content = content.replace(regexp, (match) => {
-                let secondSlash = match.lastIndexOf('/');
-                return 'href="/css' + match.slice(secondSlash);
-            });
         }
     }
+
+    let content = fs.readFileSync(distDir + 'index.html', 'utf8');
+    let regexp = new RegExp(/<link href="\/js\/(.*)\.css"/);
+    content = content.replace(regexp, (match) => {
+        let index = match.lastIndexOf('/');
+        return '<link href="/css/' + match.slice(index + 1);
+    });
+    fs.writeFileSync(distDir + 'index.html', content, 'utf8');
 }
 
 function archiveZIP(envBuild) {
@@ -378,6 +378,7 @@ function zipDist(envBuild) {
 
         if (envBuild === 'uat') {
             build('prod');
+            move();
             archiveZIP('prod');
         } else if (envBuild === 'prod') {
             deleteDirSync(cloneDir);
@@ -415,5 +416,4 @@ function putToRepo(name) {
     
     req.write(buildName);
     req.end();
-    
 }
