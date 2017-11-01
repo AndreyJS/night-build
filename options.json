@@ -2,14 +2,14 @@
     "root": "src",
     "hash": {
         "src": ["assets"],
-        "exclude": ["assets/favicon.ico", "assets/robots.txt"]
+        "exclude": ["assets/ico", "assets/robots.txt"]
     },
     "minify": {
         "src": [""],
         "exclude": ["tsconfig.app.json", "tsconfig.spec.json"]
     },
     "zip": {
-        "exclude": ["robots.txt", "browserconfig.xml", "manifest.webmanifest"]
+        "exclude": ["3rdpartylicenses.txt", "robots.txt", "browserconfig.xml", "manifest.json", "safari-pinned-tab.svg"]
     },
     "fonts": {
         "FAMILY": "Roboto",

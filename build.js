@@ -8,14 +8,14 @@ let http = require('http');
 const zlib = require('zlib');
 const options = require('./options');
 
-let packageJSON, projName, projVersion, isUpload = true;
+let packageJSON, projName, projVersion, isUpload = false;
 
 for (let i = 2; i < process.argv.length; i++) {
     if (process.argv[i] === '-name' || process.argv[i] === '-n') {
         projName = process.argv[i + 1];
     }
-    if (process.argv[i] === '-no-upload' || process.argv[i] === '-no') {
-        isUpload = false;
+    if (process.argv[i] === '-upload' || process.argv[i] === '-up') {
+        isUpload = true;
     }
 }
 
@@ -26,6 +26,7 @@ if (!projName) {
 }
 
 let hashManifest = {},
+    bannerManifest = [],
     excludeOptions = {},
     excludeExt = { jpeg: 0, jpg: 0, ico: 0, png: 0 },
 
@@ -35,11 +36,11 @@ let hashManifest = {},
     rootDir = cloneDir + options.root + '/';
 
 // Step 0: Delete directories if its exist
-console.log('\n##### Deleting directories ##############\n');
-deleteDirSync(buildDir);
-deleteDirSync(cloneDir);
+// console.log('\n##### Deleting directories ##############\n');
+// deleteDirSync(buildDir);
+// deleteDirSync(cloneDir);
 // Step 1: Clone project
-child_process.execSync('git clone git@git.connectflexi.com:Frontend/' + projName + '.git ' + cloneDir);
+// child_process.execSync('git clone git@git.connectflexi.com:Frontend/' + projName + '.git ' + ' -b build ' + cloneDir);
 
 try {
     packageJSON = JSON.parse(fs.readFileSync(cloneDir + 'package.json'));
@@ -66,13 +67,20 @@ try {
     process.exit();
 }
 
-console.log('\n##### Installing packages #############\n');
-child_process.execSync('npm install @angular/cli@1.0.3', { cwd: cloneDir });
-child_process.execSync('npm install', { cwd: cloneDir });
-setPath();
+console.log('\n##### Deleting webpack #############\n');
+delWebpack();
+
+// console.log('\n##### Installing packages #############\n');
+// child_process.execSync('npm install @angular/cli@1.4.3', { cwd: cloneDir });
+// child_process.execSync('npm install', { cwd: cloneDir });
+// setPath();
 
 // Step 2: Minify, Hashing, Building, Moving, Archiving files, Archiving dist
-minify();
+// minify();
+
+// archiveZIP('prod');  
+// build('prod');
+// move();
 
 function deleteDirSync(dir) {
     let files;
@@ -125,6 +133,15 @@ function deleteDir(dir) {
             });           
         }  
     });
+}
+
+function delWebpack() {
+    // packageJSON = JSON.parse(fs.readFileSync(cloneDir + 'package.json'));
+    delete packageJSON.devDependencies.webpack;
+    delete packageJSON.devDependencies['webpack-dev-server'];
+
+    let content = JSON.stringify(packageJSON, null, 4);
+    fs.writeFileSync(cloneDir + 'package.json', content);    
 }
 
 function setPath() {
@@ -208,7 +225,7 @@ function hash() {
 
     build('uat');
     move();
-    archiveZIP('uat');  
+    // archiveZIP('uat');  
 };
 
 function hashingFiles(dir) {
@@ -274,41 +291,79 @@ function build(envBuild) {
         fs.mkdirSync(buildDir);
     }
     console.log('\n##### Building ########################\n');
-    console.log(`ng build -prod -e ${envBuild} --extract-licenses=false`);
-    child_process.execSync(`ng build -prod -e ${envBuild} --extract-licenses=false`, { cwd: cloneDir });
+    console.log(`ng build -prod -e ${envBuild}`);
+    child_process.execSync(`ng build -prod -e ${envBuild}`, { cwd: cloneDir });
+
 }
 
 function move() {
-    try {
-        fs.readdirSync(distDir + 'js/');
-    } catch(err) {
-        fs.mkdirSync(distDir + 'js/');
-    }
-    try {
-        fs.readdirSync(distDir + 'css/');
-    } catch(err) {
-        fs.mkdirSync(distDir + 'css/');
-    }
+    // try {
+    //     fs.readdirSync(distDir + 'js/');
+    // } catch(err) {
+    //     fs.mkdirSync(distDir + 'js/');
+    // }
+    // try {
+    //     fs.readdirSync(distDir + 'css/');
+    // } catch(err) {
+    //     fs.mkdirSync(distDir + 'css/');
+    // }
     let files = fs.readdirSync(distDir);
-    let inline;
+
     for (let i = 0; i < files.length; i++) {
         let stat = fs.statSync(distDir + files[i]);
         if (stat.isFile()) {
-            if (/.js$/.test(files[i])) {
+            // if (/^flags(.)*\.svg$/.test(files[i]) || 
+            //     /^icons(.)*\.svg$/.test(files[i]) ||
+            //     /^login(.)*\.svg$/.test(files[i]) ||
+            //     /^partners(.)*\.png$/.test(files[i])
+            // ) {
+            //     console.log(distDir + files[i]);
+            //     fs.unlink(distDir + files[i]);
+            // }
+
+            /*if (/.js$/.test(files[i])) {
                 fs.renameSync(distDir + files[i], distDir + 'js/' + files[i]);
             } else if (/.css$/.test(files[i])) {
                 fs.renameSync(distDir + files[i], distDir + 'css/' + files[i]);
+            } else*/ if (/^b(.)*\.png$/.test(files[i])) {
+                fs.renameSync(distDir + files[i], distDir + 'img/' + files[i]);
+                bannerManifest.push(files[i]);
             }
         }
     }
+    replacingBanners();
 
-    let content = fs.readFileSync(distDir + 'index.html', 'utf8');
-    let regexp = new RegExp(/<link href="\/js\/(.*)\.css"/);
-    content = content.replace(regexp, (match) => {
-        let index = match.lastIndexOf('/');
-        return '<link href="/css/' + match.slice(index + 1);
-    });
-    fs.writeFileSync(distDir + 'index.html', content, 'utf8');
+    let robots = fs.readFileSync('robots.txt');
+    fs.writeFileSync(distDir + 'robots.txt', robots);
+
+    // let content = fs.readFileSync(distDir + 'index.html', 'utf8');
+    // let regexp = new RegExp(/<link href="\/js\/(.*)\.css"/);
+    // content = content.replace(regexp, (match) => {
+    //     let index = match.lastIndexOf('/');
+    //     return '<link href="/css/' + match.slice(index + 1);
+    // });
+    // fs.writeFileSync(distDir + 'index.html', content, 'utf8');
+}
+
+function replacingBanners() {
+    let files = fs.readdirSync(distDir);
+    for (let i = 0; i < files.length; i++) {
+
+        if (/^vendor(.)*\.js$/.test(files[i])) {
+            let content = fs.readFileSync(distDir + files[i], 'utf8');
+            for (let j = 0; j < bannerManifest.length; j++) {
+                let regexp = new RegExp(bannerManifest[j], "g");
+                content = content.replace(regexp, (match) => {
+                    console.log('file: ' + distDir + files[i]);
+                    console.log('matched string: ' + match);
+                    console.log('replaced string: img/' + bannerManifest[j]);
+                    console.log('----------');                   
+                    return 'img/' + bannerManifest[j];
+                });
+            }
+            fs.writeFileSync(distDir + files[i], content, 'utf8');
+        }
+    }    
 }
 
 function archiveZIP(envBuild) {
@@ -361,29 +416,29 @@ function zip(dir) {
 
 function zipDist(envBuild) {
 
-    console.log('\n\t##### Creating file version #############\n');
-    console.log(cloneDir + 'dist/version.txt');
-    fs.writeFileSync(cloneDir + 'dist/version.txt', projVersion);
+    // console.log('\n\t##### Creating file version #############\n');
+    // console.log(cloneDir + 'dist/version.txt');
+    // fs.writeFileSync(cloneDir + 'dist/version.txt', projVersion);
 
     console.log('\n##### Archiving dist ##################\n');
     let name = `${projName}-${projVersion}-${envBuild}.tar.gz`;
     let output = fs.createWriteStream(buildDir + name);
 
     output.on('close', () => {
-        deleteDirSync(cloneDir + 'dist/');
+        // deleteDirSync(cloneDir + 'dist/');
 
         console.log(`Archive ${name} created`);
         console.log('Total size: ' + archive.pointer() + ' bytes');
         console.log('Archiver has been finalized and the output file descriptor has closed');
 
-        if (envBuild === 'uat') {
-            build('prod');
-            move();
-            archiveZIP('prod');
-        } else if (envBuild === 'prod') {
-            deleteDirSync(cloneDir);
-        }
-        if (isUpload) putToRepo(name);
+        // if (envBuild === 'uat') {    
+        //     build('prod');
+        //     move();
+        //     archiveZIP('prod');
+        // } else if (envBuild === 'prod') {
+        //     deleteDirSync(cloneDir);
+        // }
+        // if (isUpload) putToRepo(name);
     })
 
     let archive = archiver('tar', { gzip: true });
