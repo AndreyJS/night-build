@@ -26,7 +26,6 @@ if (!projName) {
 }
 
 let hashManifest = {},
-    bannerManifest = [],
     excludeOptions = {},
     excludeExt = { jpeg: 0, jpg: 0, ico: 0, png: 0 },
 
@@ -67,8 +66,8 @@ try {
     process.exit();
 }
 
-console.log('\n##### Deleting webpack #############\n');
-delWebpack();
+// console.log('\n##### Deleting webpack #############\n');
+// delWebpack();
 
 // console.log('\n##### Installing packages #############\n');
 // child_process.execSync('npm install @angular/cli@1.4.3', { cwd: cloneDir });
@@ -77,6 +76,7 @@ delWebpack();
 
 // Step 2: Minify, Hashing, Building, Moving, Archiving files, Archiving dist
 // minify();
+changeVersion();
 
 // archiveZIP('prod');  
 // build('prod');
@@ -136,7 +136,6 @@ function deleteDir(dir) {
 }
 
 function delWebpack() {
-    // packageJSON = JSON.parse(fs.readFileSync(cloneDir + 'package.json'));
     delete packageJSON.devDependencies.webpack;
     delete packageJSON.devDependencies['webpack-dev-server'];
 
@@ -307,7 +306,9 @@ function move() {
     // } catch(err) {
     //     fs.mkdirSync(distDir + 'css/');
     // }
-    let files = fs.readdirSync(distDir);
+    let files = fs.readdirSync(distDir),
+        bannerManifest = [],
+        assetsManifest = [];
 
     for (let i = 0; i < files.length; i++) {
         let stat = fs.statSync(distDir + files[i]);
@@ -328,13 +329,26 @@ function move() {
             } else*/ if (/^b(.)*\.png$/.test(files[i])) {
                 fs.renameSync(distDir + files[i], distDir + 'img/' + files[i]);
                 bannerManifest.push(files[i]);
+            } else if (/^(flags|icons|login_bg|partners-logos)(.)*(\.svg|\.png)$/.test(files[i])) {
+                fs.renameSync(distDir + files[i], distDir + 'img/' + files[i]);
+                assetsManifest.push(files[i]);
             }
         }
     }
-    replacingBanners();
+    replacingImgs(bannerManifest, /^vendor(.)*\.js$/);
+    replacingImgs(assetsManifest, /^main(.)*\.js$/);
+    
+    // Delete flags, icons, login_bg, partners-logos from img/
+    fs.unlinkSync(distDir + 'img/flags.svg');
+    fs.unlinkSync(distDir + 'img/icons.svg');
+    fs.unlinkSync(distDir + 'img/login_bg.svg');
+    fs.unlinkSync(distDir + 'img/partners-logos.png');
 
+    // Copy robots.txt to dist
     let robots = fs.readFileSync('robots.txt');
     fs.writeFileSync(distDir + 'robots.txt', robots);
+
+    changeVersion();
 
     // let content = fs.readFileSync(distDir + 'index.html', 'utf8');
     // let regexp = new RegExp(/<link href="\/js\/(.*)\.css"/);
@@ -345,25 +359,40 @@ function move() {
     // fs.writeFileSync(distDir + 'index.html', content, 'utf8');
 }
 
-function replacingBanners() {
+function replacingImgs(manifest, source) {
     let files = fs.readdirSync(distDir);
     for (let i = 0; i < files.length; i++) {
 
-        if (/^vendor(.)*\.js$/.test(files[i])) {
+        if (source.test(files[i])) {
             let content = fs.readFileSync(distDir + files[i], 'utf8');
-            for (let j = 0; j < bannerManifest.length; j++) {
-                let regexp = new RegExp(bannerManifest[j], "g");
+            for (let j = 0; j < manifest.length; j++) {
+                let regexp = new RegExp(manifest[j], "g");
                 content = content.replace(regexp, (match) => {
                     console.log('file: ' + distDir + files[i]);
                     console.log('matched string: ' + match);
-                    console.log('replaced string: img/' + bannerManifest[j]);
+                    console.log('replaced string: img/' + manifest[j]);
                     console.log('----------');                   
-                    return 'img/' + bannerManifest[j];
+                    return 'img/' + manifest[j];
                 });
             }
             fs.writeFileSync(distDir + files[i], content, 'utf8');
         }
     }    
+}
+
+function changeVersion() {
+    let content = fs.readFileSync(distDir + 'index.html', 'utf8');
+    let regexp = new RegExp('app-version="', "g");
+
+    content = content.replace(regexp, (match) => {
+        console.log('file: ' + distDir + 'index.html');
+        console.log('matched string: ' + match);
+        console.log('replaced string: ' + match + projVersion);
+        console.log('----------');                   
+        return match + projVersion;
+    });
+
+    fs.writeFileSync(distDir + 'index.html', content, 'utf8');
 }
 
 function archiveZIP(envBuild) {

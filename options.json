@@ -2,7 +2,7 @@
     "root": "src",
     "hash": {
         "src": ["assets"],
-        "exclude": ["assets/ico", "assets/robots.txt"]
+        "exclude": ["assets/ico", "assets/img/flags.svg", "assets/img/icons.svg", "assets/img/login_bg.svg", "assets/img/partners-logos.png"]
     },
     "minify": {
         "src": [""],
