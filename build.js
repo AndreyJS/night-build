@@ -42,7 +42,7 @@ deleteDirSync(buildDir);
 deleteDirSync(cloneDir);
 
 // Cloning project
-child_process.execSync('git clone git@git.connectflexi.com:Frontend/' + projName + '.git ' + ' -b 790-add-flexi-md ' + cloneDir);
+child_process.execSync('git clone git@git.connectflexi.com:Frontend/' + projName + '.git ' + cloneDir);
 
 // Reading name and version of project
 try {
@@ -74,7 +74,6 @@ console.log('\n##### Deleting webpack #############\n');
 delWebpack();
 
 console.log('\n##### Installing packages #############\n');
-child_process.execSync('npm install @angular/cli@1.5.0', { cwd: cloneDir });
 child_process.execSync('npm install', { cwd: cloneDir });
 // setPathJS();
 
@@ -221,9 +220,9 @@ function hash() {
     replaceHashFiles(rootDir);
     excludeOptions = {};
 
-    build('prod');
-    move('prod');
-    archiveZIP('prod');  
+    build('uat');
+    move('uat');
+    archiveZIP('uat');  
 };
 
 function hashFiles(dir) {
@@ -304,13 +303,13 @@ function move(env) {
     // } catch(err) {
     //     fs.mkdirSync(distDir + 'css/');
     // }
-    let files = fs.readdirSync(distDir),
-        bannerManifest = [],
-        assetsManifest = [];
+    // let files = fs.readdirSync(distDir),
+    //     bannerManifest = [],
+    //     assetsManifest = [];
 
-    for (let i = 0; i < files.length; i++) {
-        let stat = fs.statSync(distDir + files[i]);
-        if (stat.isFile()) {
+    // for (let i = 0; i < files.length; i++) {
+    //     let stat = fs.statSync(distDir + files[i]);
+    //     if (stat.isFile()) {
             // if (/^flags(.)*\.svg$/.test(files[i]) || 
             //     /^icons(.)*\.svg$/.test(files[i]) ||
             //     /^login(.)*\.svg$/.test(files[i]) ||
@@ -331,8 +330,8 @@ function move(env) {
                 fs.renameSync(distDir + files[i], distDir + 'img/' + files[i]);
                 assetsManifest.push(files[i]);
             }*/
-        }
-    }
+    //     }
+    // }
     // replaceImgs(bannerManifest, /^vendor(.)*\.js$/);
     // replaceImgs(assetsManifest, /^main(.)*\.js$/);
     
