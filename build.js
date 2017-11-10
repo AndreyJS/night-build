@@ -4,12 +4,23 @@ const htmlmin = require('gulp-htmlmin');
 const child_process = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
-let http = require('http');
+const http = require('http');
 const zlib = require('zlib');
 const options = require('./options');
 
-let packageJSON, projName, projVersion, isUpload = false;
+let packageJSON, 
+    projName, 
+    projVersion, 
+    isUpload = false,
+    hashManifest = {},
+    excludeOptions = {},
+    excludeExt = { jpeg: 0, jpg: 0, ico: 0, png: 0 },
+    buildDir = 'build/',
+    cloneDir = 'clone/',
+    distDir = cloneDir + 'dist/';
+    rootDir = cloneDir + options.root + '/';
 
+// Analyzing command
 for (let i = 2; i < process.argv.length; i++) {
     if (process.argv[i] === '-name' || process.argv[i] === '-n') {
         projName = process.argv[i + 1];
@@ -25,22 +36,15 @@ if (!projName) {
     process.exit();
 }
 
-let hashManifest = {},
-    excludeOptions = {},
-    excludeExt = { jpeg: 0, jpg: 0, ico: 0, png: 0 },
+// Deleting directories if its exist
+console.log('\n##### Deleting directories ##############\n');
+deleteDirSync(buildDir);
+deleteDirSync(cloneDir);
 
-    buildDir = 'build/',
-    cloneDir = 'clone/',
-    distDir = cloneDir + 'dist/';
-    rootDir = cloneDir + options.root + '/';
+// Cloning project
+child_process.execSync('git clone git@git.connectflexi.com:Frontend/' + projName + '.git ' + ' -b 790-add-flexi-md ' + cloneDir);
 
-// Step 0: Delete directories if its exist
-// console.log('\n##### Deleting directories ##############\n');
-// deleteDirSync(buildDir);
-// deleteDirSync(cloneDir);
-// Step 1: Clone project
-// child_process.execSync('git clone git@git.connectflexi.com:Frontend/' + projName + '.git ' + ' -b build ' + cloneDir);
-
+// Reading name and version of project
 try {
     packageJSON = JSON.parse(fs.readFileSync(cloneDir + 'package.json'));
     console.log('\n##### Reading package.json ############\n');
@@ -66,21 +70,16 @@ try {
     process.exit();
 }
 
-// console.log('\n##### Deleting webpack #############\n');
-// delWebpack();
+console.log('\n##### Deleting webpack #############\n');
+delWebpack();
 
-// console.log('\n##### Installing packages #############\n');
-// child_process.execSync('npm install @angular/cli@1.4.3', { cwd: cloneDir });
-// child_process.execSync('npm install', { cwd: cloneDir });
-// setPath();
+console.log('\n##### Installing packages #############\n');
+child_process.execSync('npm install @angular/cli@1.5.0', { cwd: cloneDir });
+child_process.execSync('npm install', { cwd: cloneDir });
+// setPathJS();
 
-// Step 2: Minify, Hashing, Building, Moving, Archiving files, Archiving dist
-// minify();
-changeVersion();
-
-// archiveZIP('prod');  
-// build('prod');
-// move();
+// Minify, Hashing, Building, Moving, Archiving files, Archiving dist
+minify();
 
 function deleteDirSync(dir) {
     let files;
@@ -143,7 +142,7 @@ function delWebpack() {
     fs.writeFileSync(cloneDir + 'package.json', content);    
 }
 
-function setPath() {
+function setPathJS() {
     let content;
     try {
         content = fs.readFileSync(cloneDir + 'node_modules/@angular/cli/models/webpack-configs/common.js', 'utf8');
@@ -213,21 +212,21 @@ function hash() {
     }
     console.log('\n\t##### Changing name files #############\n');
     for (let i = 0; i < src.length; i++) {
-        hashingFiles(rootDir + src[i]);
+        hashFiles(rootDir + src[i]);
     }  
     console.log('\n\t##### Creating hash manifest ###########\n');
     fs.writeFileSync(cloneDir + 'hashManifest.json', JSON.stringify(hashManifest, null, 4));
     console.log(cloneDir + 'hashManifest.json');
     console.log('\n\t##### Replacing hash url in files #####\n');
-    replaceHashingFiles(rootDir);
+    replaceHashFiles(rootDir);
     excludeOptions = {};
 
-    build('uat');
-    move();
-    // archiveZIP('uat');  
+    build('prod');
+    move('prod');
+    archiveZIP('prod');  
 };
 
-function hashingFiles(dir) {
+function hashFiles(dir) {
     let files = fs.readdirSync(dir);
     for (let j = 0; j < files.length; j++) {
         if ((dir + '/' + files[j]) in excludeOptions) {
@@ -249,12 +248,12 @@ function hashingFiles(dir) {
             console.log('----------'); 
             fs.renameSync(dir + '/' + files[j], dir + '/' + hashManifest[files[j]]);
         } else if (stat.isDirectory()) {
-            hashingFiles(dir + '/' + files[j]);
+            hashFiles(dir + '/' + files[j]);
         }
     }      
 }
 
-function replaceHashingFiles(dir) {
+function replaceHashFiles(dir) {
     let files = fs.readdirSync(dir);
     for (let i = 0; i < files.length; i++) {
         let stat = fs.statSync(dir + files[i]);
@@ -278,7 +277,7 @@ function replaceHashingFiles(dir) {
             }
             fs.writeFileSync(dir + files[i], content, 'utf8');
         } else if (stat.isDirectory()) {
-            replaceHashingFiles(dir + files[i] + '/');
+            replaceHashFiles(dir + files[i] + '/');
         }
     }
 }
@@ -290,12 +289,11 @@ function build(envBuild) {
         fs.mkdirSync(buildDir);
     }
     console.log('\n##### Building ########################\n');
-    console.log(`ng build -prod -e ${envBuild}`);
-    child_process.execSync(`ng build -prod -e ${envBuild}`, { cwd: cloneDir });
-
+    console.log(`ng build -prod -e ${envBuild} --aot false --build-optimizer false`);
+    child_process.execSync(`ng build -prod -e ${envBuild} --aot false --build-optimizer false`, { cwd: cloneDir });
 }
 
-function move() {
+function move(env) {
     // try {
     //     fs.readdirSync(distDir + 'js/');
     // } catch(err) {
@@ -326,26 +324,28 @@ function move() {
                 fs.renameSync(distDir + files[i], distDir + 'js/' + files[i]);
             } else if (/.css$/.test(files[i])) {
                 fs.renameSync(distDir + files[i], distDir + 'css/' + files[i]);
-            } else*/ if (/^b(.)*\.png$/.test(files[i])) {
+            } else if (/^b(.)*\.png$/.test(files[i])) {
                 fs.renameSync(distDir + files[i], distDir + 'img/' + files[i]);
                 bannerManifest.push(files[i]);
             } else if (/^(flags|icons|login_bg|partners-logos)(.)*(\.svg|\.png)$/.test(files[i])) {
                 fs.renameSync(distDir + files[i], distDir + 'img/' + files[i]);
                 assetsManifest.push(files[i]);
-            }
+            }*/
         }
     }
-    replacingImgs(bannerManifest, /^vendor(.)*\.js$/);
-    replacingImgs(assetsManifest, /^main(.)*\.js$/);
+    // replaceImgs(bannerManifest, /^vendor(.)*\.js$/);
+    // replaceImgs(assetsManifest, /^main(.)*\.js$/);
     
     // Delete flags, icons, login_bg, partners-logos from img/
-    fs.unlinkSync(distDir + 'img/flags.svg');
-    fs.unlinkSync(distDir + 'img/icons.svg');
-    fs.unlinkSync(distDir + 'img/login_bg.svg');
-    fs.unlinkSync(distDir + 'img/partners-logos.png');
+    if (projName != 'bonus') {
+        fs.unlinkSync(distDir + 'img/flags.svg');
+        fs.unlinkSync(distDir + 'img/icons.svg');
+        fs.unlinkSync(distDir + 'img/login_bg.svg');
+        fs.unlinkSync(distDir + 'img/partners-logos.png');
+    }
 
     // Copy robots.txt to dist
-    let robots = fs.readFileSync('robots.txt');
+    let robots = fs.readFileSync('robots_' + env + '.txt');
     fs.writeFileSync(distDir + 'robots.txt', robots);
 
     changeVersion();
@@ -359,7 +359,7 @@ function move() {
     // fs.writeFileSync(distDir + 'index.html', content, 'utf8');
 }
 
-function replacingImgs(manifest, source) {
+function replaceImgs(manifest, source) {
     let files = fs.readdirSync(distDir);
     for (let i = 0; i < files.length; i++) {
 
@@ -460,13 +460,13 @@ function zipDist(envBuild) {
         console.log('Total size: ' + archive.pointer() + ' bytes');
         console.log('Archiver has been finalized and the output file descriptor has closed');
 
-        // if (envBuild === 'uat') {    
-        //     build('prod');
-        //     move();
-        //     archiveZIP('prod');
-        // } else if (envBuild === 'prod') {
-        //     deleteDirSync(cloneDir);
-        // }
+        if (envBuild === 'uat') {    
+            build('prod');
+            move('prod');
+            archiveZIP('prod');
+        } else if (envBuild === 'prod') {
+            deleteDirSync(cloneDir);
+        }
         // if (isUpload) putToRepo(name);
     })
 

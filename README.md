@@ -1,19 +1,17 @@
 # BUILD
 Проект предназначен для сборки проектов, написанных с использованием [angular-cli](https://github.com/angular/angular-cli). 
 
-Этот проект использует [NodeJS](https://nodejs.org/dist/latest-v6.x/docs/api/) v.6.10.3
+Этот проект использует [NodeJS](https://nodejs.org/dist/latest-v8.x/docs/api/) v.8.x
 
 # Этапы сборки
 [TODO] описать
 
 # Запуск сборки
 
-## Перед сборкой в node_modules\@angular\cli\models\webpack-configs\common.js в return изменить значение output.publicPath c 'buildOptions.deployUrl' на '/js/'
-
 ```bash
 node build -name <name> [-no-upload]
 ```
-## Возможные значения
+## Возможные ключи
 
 1. -name, -n - имя проекта на GitLab. Имя может быть произвольным.
 
@@ -22,11 +20,11 @@ node build -name <name> [-no-upload]
 node build -name bonus
 ```
 
-2. -no-upload, -no - ключ, отменяющий загрузку в репозиторий.
+2. (на 10.11.2017 не работает, т.к. изменился репозиторий) --upload, -up - ключ, включающий загрузку в репозиторий.
 
 Пример: 
 ```bash
-node build -name bonus -no-upload
+node build -name bonus -upload
 ```
 
 # Изменение версии
