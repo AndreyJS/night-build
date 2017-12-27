@@ -1,12 +1,16 @@
 {
-  "name": "build",
-  "version": "1.0.6",
-  "license": "MIT",
-  "private": true,
-  "dependencies": {
-    "archiver": "^1.3.0",
-    "gulp": "^3.9.1",
-    "gulp-htmlmin": "^3.0.0"
-  },
-  "devDependencies": {}
+    "name": "build",
+    "version": "1.0.6",
+    "license": "MIT",
+    "private": true,
+    "scripts": {
+        "build": "node delDir && node build -n night2stay && node build -n night2stay -t sub-lOuvertureTravel",
+        "test": "node delDir && node build_n2s"
+    },
+    "dependencies": {
+        "archiver": "^1.3.0",
+        "gulp": "^3.9.1",
+        "gulp-htmlmin": "^3.0.0"
+    },
+    "devDependencies": {}
 }

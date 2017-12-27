@@ -1,4 +1,4 @@
 /.vscode
-/clone
+/clone*
 /node_modules
 /build

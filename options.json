@@ -1,13 +1,15 @@
 {
     "root": "src",
+    "env": ["back", "uat", "prod"],
     "hash": {
         "src": ["assets"],
-        "exclude": ["assets/ico", "assets/img/flags.svg", "assets/img/icons.svg", "assets/img/login_bg.svg", "assets/img/partners-logos.png"]
+        "exclude": ["assets/ico"]
     },
     "minify": {
         "src": [""],
         "exclude": ["tsconfig.app.json", "tsconfig.spec.json"]
     },
+    "types": ["night2stay", "sub-lOuvertureTravel"],
     "zip": {
         "exclude": ["3rdpartylicenses.txt", "robots.txt", "browserconfig.xml", "manifest.json", "safari-pinned-tab.svg"]
     },
